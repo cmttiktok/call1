@@ -6,94 +6,142 @@
     <title>Viettel Net - Bèo Control</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        /* GIỮ NGUYÊN CSS CŨ CỦA ANH VÀ THÊM CÁC DÒNG NÀY */
-        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --danger: #ff3b30; }
-        
-        /* Nâng cấp Mục 2: Giao diện Glassmorphism cho khung chat */
-        #chat-box {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
+        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --glass: rgba(255, 255, 255, 0.1); --neon: #00d2ff; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: #000; color: white; font-family: -apple-system, system-ui, sans-serif; height: 100svh; overflow: hidden; position: fixed; width: 100%; }
 
-        .msg.me { background: var(--zalo-blue); align-self: flex-end; }
-        .msg.partner { background: rgba(255,255,255,0.2); align-self: flex-start; }
+        /* Login Overlay */
+        #login-overlay { position: fixed; inset: 0; background: var(--zalo-blue); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; transition: 0.5s; }
+        .login-card { background: white; padding: 30px; border-radius: 25px; width: 100%; max-width: 320px; text-align: center; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .login-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
+        .login-card button { width: 100%; padding: 12px; background: var(--zalo-blue); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
 
-        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; border: 1px solid #fff; }
-        .status-text { font-size: 10px; opacity: 0.7; display: block; text-align: right; margin-top: 2px; }
+        /* Video Display */
+        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #111; }
+        #local-video { position: absolute; top: 20px; right: 20px; width: 100px; height: 150px; border-radius: 15px; border: 2px solid var(--neon); z-index: 10; object-fit: cover; transform: scaleX(-1); box-shadow: 0 0 15px var(--neon); }
+
+        /* Chat Container (Glassmorphism) */
+        .chat-container { position: absolute; bottom: 100px; left: 15px; right: 15px; height: 250px; display: flex; flex-direction: column; z-index: 20; }
+        #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--glass); backdrop-filter: blur(15px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
         
-        /* Nút chụp ảnh */
-        .btn-snap { background: rgba(255,255,255,0.2); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: none; color: white; }
+        .msg { padding: 8px 14px; border-radius: 18px; max-width: 80%; font-size: 14px; position: relative; animation: fadeIn 0.3s; }
+        .msg.me { align-self: flex-end; background: var(--zalo-blue); color: white; border-bottom-right-radius: 4px; }
+        .msg.partner { align-self: flex-start; background: rgba(255,255,255,0.2); border-bottom-left-radius: 4px; }
+        
+        .status-text { font-size: 9px; opacity: 0.7; display: block; margin-top: 2px; text-align: right; }
+        .chat-img { max-width: 100%; border-radius: 12px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.3); }
+
+        /* Input & Controls */
+        .input-bar { display: flex; gap: 8px; margin-top: 10px; padding: 0 5px; }
+        .input-bar input { flex: 1; background: rgba(255,255,255,0.2); border: none; padding: 12px 18px; border-radius: 25px; color: white; outline: none; backdrop-filter: blur(5px); }
+        
+        .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; z-index: 30; }
+        .circle-btn { width: 55px; height: 55px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); }
+        .circle-btn.hangup { background: var(--danger); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
+
+    <div id="login-overlay">
+        <div class="login-card">
+            <h2 id="login-title">Chào anh Tùng Anh!</h2>
+            <p id="login-desc">Vui lòng nhập mật khẩu cửa hàng</p>
+            <input type="password" id="password-input" placeholder="Mật khẩu...">
+            <button onclick="checkLogin()">Đăng nhập</button>
+        </div>
+    </div>
+
+    <video id="local-video" autoplay muted playsinline></video>
+    <video id="remote-video" autoplay playsinline></video>
+
+    <div class="chat-container">
+        <div id="chat-box"></div>
+        <div class="input-bar">
+            <input type="text" id="chat-input" placeholder="Nhắn tin cho người ấy...">
+            <button onclick="sendMsg()" style="background:none; border:none; font-size: 24px;">🚀</button>
+        </div>
+    </div>
+
     <div class="controls">
-        <button class="control-btn" onclick="toggleMic()" id="mic-btn">🎙️</button>
-        <button class="btn-snap" onclick="takeSnapshot()">📸</button>
-        <button class="control-btn hangup" onclick="hangUp()">📞</button>
-        <button class="control-btn" onclick="switchCamera()">🔄</button>
+        <button class="circle-btn" onclick="toggleMic()" id="mic-btn">🎙️</button>
+        <button class="circle-btn" onclick="takeSnapshot()">📸</button>
+        <button class="circle-btn hangup" onclick="location.reload()">📞</button>
+        <button class="circle-btn" onclick="switchCamera()">🔄</button>
     </div>
 
     <script>
-        // GIỮ NGUYÊN CÁC BIẾN MYID, PARTNERID VÀ PHẦN LOGIN CỦA ANH
-        let offlineQueue = [];
-        const CHAT_STORAGE_KEY = 'chat_history_v1';
+        const urlParams = new URLSearchParams(window.location.search);
+        const myId = urlParams.get('id');
+        const partnerId = urlParams.get('to');
+        const correctPassword = "270799"; 
 
-        // 1. TỰ ĐỘNG LOAD LỊCH SỬ KHI VÀO APP
-        window.onload = () => {
-            const history = localStorage.getItem(CHAT_STORAGE_KEY);
-            if (history) {
+        let peer, localStream, dataConn, currentCall;
+        let isMicOn = true;
+        let facingMode = "user";
+        let offlineQueue = [];
+
+        // 1. KIỂM TRA ĐĂNG NHẬP & LOAD LỊCH SỬ
+        function checkLogin() {
+            const input = document.getElementById('password-input').value;
+            if (input === correctPassword) {
+                document.getElementById('login-overlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('login-overlay').style.display = 'none', 500);
+                startSystem();
+            } else { alert("Sai mật khẩu rồi anh ơi!"); }
+        }
+
+        function startSystem() {
+            peer = new Peer(myId);
+            
+            // Load lịch sử chat
+            const history = localStorage.getItem('chat_' + partnerId);
+            if(history) {
                 document.getElementById('chat-box').innerHTML = history;
                 scrollChat();
             }
-        };
 
-        // 2. CHỨC NĂNG CHỤP VÀ GỬI ẢNH (Mục 1 yêu cầu)
-        function takeSnapshot() {
-            const video = document.getElementById('remote-video');
-            if (!video.srcObject) return;
+            initMedia();
 
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            
-            const base64 = canvas.toDataURL('image/jpeg', 0.5);
-            const msgId = 'img-' + Date.now();
-            
-            appendImage(base64, 'me', msgId);
-            if(dataConn && dataConn.open) {
-                dataConn.send({ type: 'IMAGE', data: base64, id: msgId });
-            }
-            saveChat();
+            peer.on('open', id => {
+                if(partnerId) {
+                    dataConn = peer.connect(partnerId);
+                    setupDataHandlers();
+                }
+            });
+
+            peer.on('call', call => {
+                call.answer(localStream);
+                setupCallHandlers(call);
+            });
+
+            peer.on('connection', conn => {
+                dataConn = conn;
+                setupDataHandlers();
+            });
         }
 
-        // 3. CẬP NHẬT HÀM GỬI TIN NHẮN (Có báo trạng thái)
-        function sendMsg() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if(!text) return;
-
-            const msgId = 'msg-' + Date.now();
-            appendMsg(text, 'me', msgId);
-
-            if(dataConn && dataConn.open) {
-                dataConn.send({ type: 'CHAT', text: text, id: msgId });
-            } else {
-                // Lưu vào hàng chờ nếu đối phương offline
-                offlineQueue.push({ type: 'CHAT', text: text, id: msgId });
-                document.querySelector(`#${msgId} .status-text`).innerText = 'Chờ gửi...';
-            }
-            input.value = '';
-            saveChat();
+        async function initMedia() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+                if(partnerId) {
+                    currentCall = peer.call(partnerId, localStream);
+                    setupCallHandlers(currentCall);
+                }
+            } catch (err) { alert("Lỗi camera: " + err); }
         }
 
-        // 4. XỬ LÝ DỮ LIỆU ĐẾN (Báo "Đã xem")
+        function setupCallHandlers(call) {
+            call.on('stream', stream => {
+                document.getElementById('remote-video').srcObject = stream;
+            });
+        }
+
+        // 2. XỬ LÝ DỮ LIỆU & BÁO "ĐÃ XEM"
         function setupDataHandlers() {
             dataConn.on('open', () => {
-                // Gửi bù tin nhắn khi kết nối lại
                 if(offlineQueue.length > 0) {
                     offlineQueue.forEach(m => dataConn.send(m));
                     offlineQueue = [];
@@ -103,12 +151,10 @@
             dataConn.on('data', data => {
                 if(data.type === 'CHAT') {
                     appendMsg(data.text, 'partner', data.id);
-                    dataConn.send({ type: 'SEEN', id: data.id }); // Gửi phản hồi "Đã xem"
-                    saveChat();
+                    dataConn.send({ type: 'SEEN', id: data.id });
                 } else if(data.type === 'IMAGE') {
                     appendImage(data.data, 'partner', data.id);
                     dataConn.send({ type: 'SEEN', id: data.id });
-                    saveChat();
                 } else if(data.type === 'SEEN') {
                     const el = document.querySelector(`#${data.id} .status-text`);
                     if(el) el.innerText = '✓ Đã xem';
@@ -117,36 +163,72 @@
             });
         }
 
+        // 3. CÁC TÍNH NĂNG NÂNG CẤP
+        function sendMsg() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
+
+            const msgId = 'm-' + Date.now();
+            appendMsg(text, 'me', msgId);
+
+            const msgData = { type: 'CHAT', text: text, id: msgId };
+            if(dataConn && dataConn.open) dataConn.send(msgData);
+            else {
+                offlineQueue.push(msgData);
+                document.querySelector(`#${msgId} .status-text`).innerText = 'Chờ gửi...';
+            }
+            input.value = '';
+            saveChat();
+        }
+
+        function takeSnapshot() {
+            const video = document.getElementById('remote-video');
+            if(!video.srcObject) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const base64 = canvas.toDataURL('image/jpeg', 0.5);
+            const msgId = 'img-' + Date.now();
+            appendImage(base64, 'me', msgId);
+            if(dataConn && dataConn.open) dataConn.send({ type: 'IMAGE', data: base64, id: msgId });
+            saveChat();
+        }
+
         function appendMsg(text, type, id) {
-            const box = document.getElementById('chat-box');
             const div = document.createElement('div');
-            div.className = `msg ${type}`;
-            div.id = id;
-            div.innerHTML = `${text} <span class="status-text"></span>`;
-            box.appendChild(div);
+            div.className = `msg ${type}`; div.id = id;
+            div.innerHTML = `<div>${text}</div><span class="status-text"></span>`;
+            document.getElementById('chat-box').appendChild(div);
             scrollChat();
         }
 
         function appendImage(base64, type, id) {
-            const box = document.getElementById('chat-box');
             const div = document.createElement('div');
-            div.className = `msg ${type}`;
-            div.id = id;
-            div.innerHTML = `<img src="${base64}" class="chat-img"> <span class="status-text"></span>`;
-            box.appendChild(div);
+            div.className = `msg ${type}`; div.id = id;
+            div.innerHTML = `<img src="${base64}" class="chat-img"><span class="status-text"></span>`;
+            document.getElementById('chat-box').appendChild(div);
             scrollChat();
         }
 
-        function saveChat() {
-            localStorage.setItem(CHAT_STORAGE_KEY, document.getElementById('chat-box').innerHTML);
+        function saveChat() { localStorage.setItem('chat_' + partnerId, document.getElementById('chat-box').innerHTML); }
+        function scrollChat() { const b = document.getElementById('chat-box'); b.scrollTop = b.scrollHeight; }
+
+        function toggleMic() {
+            isMicOn = !isMicOn;
+            localStream.getAudioTracks()[0].enabled = isMicOn;
+            document.getElementById('mic-btn').innerText = isMicOn ? '🎙️' : '🔇';
         }
 
-        function scrollChat() {
-            const box = document.getElementById('chat-box');
-            box.scrollTop = box.scrollHeight;
+        async function switchCamera() {
+            facingMode = (facingMode === "user") ? "environment" : "user";
+            localStream.getTracks().forEach(t => t.stop());
+            await initMedia();
+            if(currentCall) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video').replaceTrack(videoTrack);
+            }
         }
-
-        // GIỮ NGUYÊN CÁC HÀM switchCamera, toggleMic, hangUp CỦA ANH
     </script>
 </body>
 </html>
