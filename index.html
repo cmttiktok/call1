@@ -2,285 +2,151 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Viettel Net - Bèo Control</title>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root {
-            --glass: rgba(255, 255, 255, 0.15);
-            --neon: #00d2ff;
-        }
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0f0c29;
-            background: linear-gradient(to bottom, #24243e, #302b63, #0f0c29);
-            color: white; overflow: hidden;
-        }
-
-        /* Giao diện Video */
-        .video-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column;
-        }
-
-        video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        /* GIỮ NGUYÊN CSS CŨ CỦA ANH VÀ THÊM CÁC DÒNG NÀY */
+        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --danger: #ff3b30; }
         
-        #remote-video:not([srcObject]) { filter: blur(15px); }
-
-        #local-video {
-            position: absolute; top: 20px; right: 20px;
-            width: 120px; height: 180px; border-radius: 15px;
-            border: 2px solid var(--neon); z-index: 10;
-            box-shadow: 0 0 15px var(--neon); object-fit: cover;
+        /* Nâng cấp Mục 2: Giao diện Glassmorphism cho khung chat */
+        #chat-box {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* Khung Chat Glassmorphism */
-        .chat-container {
-            position: absolute; bottom: 100px; left: 10px; right: 10px;
-            height: 30%; max-height: 250px;
-            background: var(--glass);
-            backdrop-filter: blur(15px);
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.2);
-            display: flex; flex-direction: column;
-            padding: 10px; z-index: 5;
-        }
+        .msg.me { background: var(--zalo-blue); align-self: flex-end; }
+        .msg.partner { background: rgba(255,255,255,0.2); align-self: flex-start; }
 
-        #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-
-        .msg {
-            padding: 8px 12px; border-radius: 12px; max-width: 80%;
-            font-size: 14px; line-height: 1.4; position: relative;
-        }
-
-        .msg.me { align-self: flex-end; background: rgba(0, 132, 255, 0.4); }
-        .msg.partner { align-self: flex-start; background: rgba(255, 255, 255, 0.2); }
-
-        .meta { font-size: 9px; margin-top: 4px; opacity: 0.6; text-align: right; }
-        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
-
-        /* Thanh điều khiển */
-        .controls {
-            position: absolute; bottom: 20px; width: 100%;
-            display: flex; justify-content: center; gap: 15px; z-index: 10;
-        }
-
-        .btn {
-            width: 55px; height: 55px; border-radius: 50%;
-            border: none; background: var(--glass);
-            backdrop-filter: blur(10px); color: white; font-size: 20px;
-            display: flex; align-items: center; justify-content: center;
-            border: 1px solid rgba(255,255,255,0.3);
-            cursor: pointer; transition: 0.3s;
-        }
-
-        .btn:active { transform: scale(0.9); background: var(--neon); }
-
-        .input-bar {
-            display: flex; gap: 10px; margin-top: 10px;
-        }
-
-        input {
-            flex: 1; background: rgba(0,0,0,0.3); border: none;
-            padding: 10px; border-radius: 10px; color: white; outline: none;
-        }
+        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; border: 1px solid #fff; }
+        .status-text { font-size: 10px; opacity: 0.7; display: block; text-align: right; margin-top: 2px; }
+        
+        /* Nút chụp ảnh */
+        .btn-snap { background: rgba(255,255,255,0.2); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; border: none; color: white; }
     </style>
 </head>
 <body>
-
-    <video id="local-video" autoplay muted playsinline></video>
-    <div class="video-container">
-        <video id="remote-video" autoplay playsinline></video>
-    </div>
-
-    <div class="chat-container">
-        <div id="chat-box"></div>
-        <div class="input-bar">
-            <input type="text" id="chat-input" placeholder="Gửi tin nhắn...">
-            <button onclick="sendMsg()" style="background: none; border: none; font-size: 20px;">🚀</button>
-        </div>
-    </div>
-
     <div class="controls">
-        <button class="btn" onclick="toggleMic()" id="mic-btn">🎙️</button>
-        <button class="btn" onclick="takeSnapshot()">📸</button>
-        <button class="btn" style="background: rgba(255, 59, 48, 0.6);" onclick="location.reload()">📞</button>
-        <button class="btn" onclick="switchCamera()">🔄</button>
+        <button class="control-btn" onclick="toggleMic()" id="mic-btn">🎙️</button>
+        <button class="btn-snap" onclick="takeSnapshot()">📸</button>
+        <button class="control-btn hangup" onclick="hangUp()">📞</button>
+        <button class="control-btn" onclick="switchCamera()">🔄</button>
     </div>
 
-<script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const myId = urlParams.get('id');
-    const partnerId = urlParams.get('to');
-    
-    let peer = new Peer(myId);
-    let localStream, dataConn, currentCall;
-    let isMicOn = true;
-    let currentFacingMode = 'user';
+    <script>
+        // GIỮ NGUYÊN CÁC BIẾN MYID, PARTNERID VÀ PHẦN LOGIN CỦA ANH
+        let offlineQueue = [];
+        const CHAT_STORAGE_KEY = 'chat_history_v1';
 
-    // 1. TỰ ĐỘNG LOAD LỊCH SỬ CHAT
-    document.addEventListener('DOMContentLoaded', () => {
-        const savedChat = localStorage.getItem('chat_history_' + partnerId);
-        if (savedChat) {
-            document.getElementById('chat-box').innerHTML = savedChat;
+        // 1. TỰ ĐỘNG LOAD LỊCH SỬ KHI VÀO APP
+        window.onload = () => {
+            const history = localStorage.getItem(CHAT_STORAGE_KEY);
+            if (history) {
+                document.getElementById('chat-box').innerHTML = history;
+                scrollChat();
+            }
+        };
+
+        // 2. CHỨC NĂNG CHỤP VÀ GỬI ẢNH (Mục 1 yêu cầu)
+        function takeSnapshot() {
+            const video = document.getElementById('remote-video');
+            if (!video.srcObject) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const base64 = canvas.toDataURL('image/jpeg', 0.5);
+            const msgId = 'img-' + Date.now();
+            
+            appendImage(base64, 'me', msgId);
+            if(dataConn && dataConn.open) {
+                dataConn.send({ type: 'IMAGE', data: base64, id: msgId });
+            }
+            saveChat();
+        }
+
+        // 3. CẬP NHẬT HÀM GỬI TIN NHẮN (Có báo trạng thái)
+        function sendMsg() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
+
+            const msgId = 'msg-' + Date.now();
+            appendMsg(text, 'me', msgId);
+
+            if(dataConn && dataConn.open) {
+                dataConn.send({ type: 'CHAT', text: text, id: msgId });
+            } else {
+                // Lưu vào hàng chờ nếu đối phương offline
+                offlineQueue.push({ type: 'CHAT', text: text, id: msgId });
+                document.querySelector(`#${msgId} .status-text`).innerText = 'Chờ gửi...';
+            }
+            input.value = '';
+            saveChat();
+        }
+
+        // 4. XỬ LÝ DỮ LIỆU ĐẾN (Báo "Đã xem")
+        function setupDataHandlers() {
+            dataConn.on('open', () => {
+                // Gửi bù tin nhắn khi kết nối lại
+                if(offlineQueue.length > 0) {
+                    offlineQueue.forEach(m => dataConn.send(m));
+                    offlineQueue = [];
+                }
+            });
+
+            dataConn.on('data', data => {
+                if(data.type === 'CHAT') {
+                    appendMsg(data.text, 'partner', data.id);
+                    dataConn.send({ type: 'SEEN', id: data.id }); // Gửi phản hồi "Đã xem"
+                    saveChat();
+                } else if(data.type === 'IMAGE') {
+                    appendImage(data.data, 'partner', data.id);
+                    dataConn.send({ type: 'SEEN', id: data.id });
+                    saveChat();
+                } else if(data.type === 'SEEN') {
+                    const el = document.querySelector(`#${data.id} .status-text`);
+                    if(el) el.innerText = '✓ Đã xem';
+                    saveChat();
+                }
+            });
+        }
+
+        function appendMsg(text, type, id) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            div.id = id;
+            div.innerHTML = `${text} <span class="status-text"></span>`;
+            box.appendChild(div);
             scrollChat();
         }
-        initCamera();
-    });
 
-    async function initCamera() {
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: currentFacingMode }, 
-                audio: true 
-            });
-            document.getElementById('local-video').srcObject = localStream;
-            if(partnerId) startCall();
-        } catch (err) { alert("Không thể truy cập Camera: " + err); }
-    }
-
-    // 2. KẾT NỐI VÀ GỌI
-    peer.on('open', id => {
-        if(partnerId) {
-            dataConn = peer.connect(partnerId);
-            setupDataHandlers();
+        function appendImage(base64, type, id) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            div.id = id;
+            div.innerHTML = `<img src="${base64}" class="chat-img"> <span class="status-text"></span>`;
+            box.appendChild(div);
+            scrollChat();
         }
-    });
 
-    peer.on('call', call => {
-        call.answer(localStream);
-        call.on('stream', stream => {
-            document.getElementById('remote-video').srcObject = stream;
-        });
-        currentCall = call;
-    });
-
-    peer.on('connection', conn => {
-        dataConn = conn;
-        setupDataHandlers();
-    });
-
-    function startCall() {
-        currentCall = peer.call(partnerId, localStream);
-        currentCall.on('stream', stream => {
-            document.getElementById('remote-video').srcObject = stream;
-        });
-    }
-
-    // 3. XỬ LÝ DỮ LIỆU & TIN NHẮN CHỜ
-    function setupDataHandlers() {
-        dataConn.on('open', () => {
-            // Gửi bù tin nhắn khi online lại
-            let queue = JSON.parse(localStorage.getItem('offline_queue_' + partnerId) || "[]");
-            if(queue.length > 0) {
-                queue.forEach(msg => dataConn.send(msg));
-                localStorage.removeItem('offline_queue_' + partnerId);
-                document.querySelectorAll('.status').forEach(s => {
-                    if(s.innerText.includes('Chờ gửi')) s.innerText = ' ✓ Đã gửi';
-                });
-            }
-        });
-
-        dataConn.on('data', data => {
-            if(data.type === 'CHAT') {
-                appendMsg(data.text, 'partner', data.id, data.time);
-                dataConn.send({ type: 'SEEN', id: data.id }); // Báo đã xem
-            } else if(data.type === 'IMAGE') {
-                appendImage(data.data, 'partner', data.time);
-                dataConn.send({ type: 'SEEN', id: data.id });
-            } else if(data.type === 'SEEN') {
-                const statusSpan = document.querySelector(`#${data.id} .status`);
-                if(statusSpan) statusSpan.innerText = ' ✓ Đã xem';
-                saveChat();
-            }
-        });
-    }
-
-    // 4. CHỨC NĂNG CHAT & LƯU TRỮ
-    function sendMsg() {
-        const input = document.getElementById('chat-input');
-        const text = input.value.trim();
-        if(!text) return;
-
-        const msgId = 'msg-' + Date.now();
-        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        const msgData = { type: 'CHAT', id: msgId, text: text, time: time };
-
-        appendMsg(text, 'me', msgId, time);
-
-        if(dataConn && dataConn.open) {
-            dataConn.send(msgData);
-        } else {
-            let queue = JSON.parse(localStorage.getItem('offline_queue_' + partnerId) || "[]");
-            queue.push(msgData);
-            localStorage.setItem('offline_queue_' + partnerId, JSON.stringify(queue));
-            document.querySelector(`#${msgId} .status`).innerText = ' (Chờ gửi...)';
+        function saveChat() {
+            localStorage.setItem(CHAT_STORAGE_KEY, document.getElementById('chat-box').innerHTML);
         }
-        input.value = '';
-        saveChat();
-    }
 
-    function takeSnapshot() {
-        const video = document.getElementById('remote-video');
-        if (!video.srcObject) return;
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        const base64 = canvas.toDataURL('image/jpeg', 0.7);
-        const msgId = 'img-' + Date.now();
-        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        
-        appendImage(base64, 'me', time, msgId);
-        if(dataConn && dataConn.open) {
-            dataConn.send({ type: 'IMAGE', id: msgId, data: base64, time: time });
+        function scrollChat() {
+            const box = document.getElementById('chat-box');
+            box.scrollTop = box.scrollHeight;
         }
-        saveChat();
-    }
 
-    function appendMsg(text, type, id, time) {
-        const div = document.createElement('div');
-        div.className = `msg ${type}`; div.id = id;
-        div.innerHTML = `<div>${text}</div><div class="meta">${time} <span class="status"></span></div>`;
-        document.getElementById('chat-box').appendChild(div);
-        scrollChat();
-    }
-
-    function appendImage(base64, type, time, id) {
-        const div = document.createElement('div');
-        div.className = `msg ${type}`; if(id) div.id = id;
-        div.innerHTML = `<img src="${base64}" class="chat-img"><div class="meta">${time} <span class="status"></span></div>`;
-        document.getElementById('chat-box').appendChild(div);
-        scrollChat();
-    }
-
-    function saveChat() {
-        localStorage.setItem('chat_history_' + partnerId, document.getElementById('chat-box').innerHTML);
-    }
-
-    function scrollChat() {
-        const box = document.getElementById('chat-box');
-        box.scrollTop = box.scrollHeight;
-    }
-
-    // 5. CÁC NÚT ĐIỀU KHIỂN
-    function toggleMic() {
-        isMicOn = !isMicOn;
-        localStream.getAudioTracks()[0].enabled = isMicOn;
-        document.getElementById('mic-btn').innerText = isMicOn ? '🎙️' : '🔇';
-    }
-
-    async function switchCamera() {
-        currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
-        const videoTrack = localStream.getVideoTracks()[0];
-        videoTrack.stop();
-        const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } });
-        const newTrack = newStream.getVideoTracks()[0];
-        localStream.addTrack(newTrack);
-        if (currentCall) currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video').replaceTrack(newTrack);
-        document.getElementById('local-video').srcObject = localStream;
-    }
-</script>
+        // GIỮ NGUYÊN CÁC HÀM switchCamera, toggleMic, hangUp CỦA ANH
+    </script>
 </body>
 </html>
