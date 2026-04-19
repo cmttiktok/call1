@@ -3,232 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Viettel Net - Bèo Control</title>
+    <title>Hệ thống tra cứu đơn hàng Tiktok Shop, Shopee</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --glass: rgba(255, 255, 255, 0.1); --neon: #00d2ff; }
+        :root { --zalo-blue: #0068ff; --pink: #ff85a2; --danger: #ff3b30; --app-height: 100svh; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: #000; color: white; font-family: -apple-system, system-ui, sans-serif; height: 100svh; overflow: hidden; position: fixed; width: 100%; }
-
-        /* Login Overlay */
-        #login-overlay { position: fixed; inset: 0; background: var(--zalo-blue); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; transition: 0.5s; }
-        .login-card { background: white; padding: 30px; border-radius: 25px; width: 100%; max-width: 320px; text-align: center; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .login-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; }
-        .login-card button { width: 100%; padding: 12px; background: var(--zalo-blue); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
-
-        /* Video Display */
-        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #111; }
-        #local-video { position: absolute; top: 20px; right: 20px; width: 100px; height: 150px; border-radius: 15px; border: 2px solid var(--neon); z-index: 10; object-fit: cover; transform: scaleX(-1); box-shadow: 0 0 15px var(--neon); }
-
-        /* Chat Container (Glassmorphism) */
-        .chat-container { position: absolute; bottom: 100px; left: 15px; right: 15px; height: 250px; display: flex; flex-direction: column; z-index: 20; }
-        #chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--glass); backdrop-filter: blur(15px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        body { margin: 0; background: #000; color: white; font-family: -apple-system, system-ui, sans-serif; height: var(--app-height); overflow: hidden; position: fixed; width: 100%; }
         
-        .msg { padding: 8px 14px; border-radius: 18px; max-width: 80%; font-size: 14px; position: relative; animation: fadeIn 0.3s; }
-        .msg.me { align-self: flex-end; background: var(--zalo-blue); color: white; border-bottom-right-radius: 4px; }
-        .msg.partner { align-self: flex-start; background: rgba(255,255,255,0.2); border-bottom-left-radius: 4px; }
-        
-        .status-text { font-size: 9px; opacity: 0.7; display: block; margin-top: 2px; text-align: right; }
-        .chat-img { max-width: 100%; border-radius: 12px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.3); }
+        #login-overlay { position: fixed; inset: 0; background: var(--zalo-blue); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { background: white; padding: 30px; border-radius: 20px; width: 100%; max-width: 320px; text-align: center; color: #333; }
+        .login-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 18px; text-align: center; }
 
-        /* Input & Controls */
-        .input-bar { display: flex; gap: 8px; margin-top: 10px; padding: 0 5px; }
-        .input-bar input { flex: 1; background: rgba(255,255,255,0.2); border: none; padding: 12px 18px; border-radius: 25px; color: white; outline: none; backdrop-filter: blur(5px); }
+        .main-container { position: relative; width: 100%; height: var(--app-height); display: none; flex-direction: column; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; position: absolute; z-index: 1; }
         
-        .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 15px; z-index: 30; }
-        .circle-btn { width: 55px; height: 55px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); }
-        .circle-btn.hangup { background: var(--danger); }
+        #local-video { 
+            position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 10px; 
+            width: 85px; height: 120px; border-radius: 10px; 
+            border: 1.5px solid rgba(255,255,255,0.5); object-fit: cover; z-index: 500; 
+            background: #000; transform: scaleX(-1); 
+        }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .zalo-header { 
+            position: absolute; top: 0; left: 0; width: 100%; 
+            padding: calc(env(safe-area-inset-top) + 15px) 100px 15px 15px; 
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); 
+            display: flex; align-items: center; z-index: 100; 
+        }
+        .status-container { display: flex; flex-direction: column; flex: 1; }
+        .notice-line { font-size: 10px; color: #ffeb3b; font-weight: 500; margin-top: 2px; line-height: 1.2; }
+
+        .controls { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 15px); width: 100%; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 400; }
+        .circle-btn { width: 45px; height: 45px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; background: rgba(255,255,255,0.25); color: white; backdrop-filter: blur(10px); }
+        .btn-call { background: #4cd964; width: 55px; height: 55px; font-size: 24px; }
+        .btn-hangup { background: var(--danger); width: 55px; height: 55px; font-size: 24px; }
+        .btn-off { background: var(--danger) !important; }
+
+        #call-ui-overlay { position: fixed; inset: 0; background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%); z-index: 2500; display: none; flex-direction: column; align-items: center; justify-content: space-around; padding: 50px 20px; }
+        .avatar-circle { width: 130px; height: 130px; background: var(--pink); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 60px; border: 4px solid rgba(255,255,255,0.2); }
+        .pulse { animation: pulse-animation 2s infinite; }
+        @keyframes pulse-animation { 0% { box-shadow: 0 0 0 0px rgba(255,255,255,0.4); } 100% { box-shadow: 0 0 0 30px rgba(255,255,255,0); } }
+
+        #chat-box { position: absolute; bottom: 160px; left: 15px; right: 15px; max-height: 20%; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 200; }
+        .msg { padding: 8px 15px; border-radius: 18px; max-width: 75%; font-size: 13px; pointer-events: auto; word-wrap: break-word; }
+        .msg.partner { background: white; color: #000; align-self: flex-start; }
+        .msg.me { background: var(--zalo-blue); color: white; align-self: flex-end; }
+        
+        .input-bar { position: absolute; bottom: 95px; left: 15px; right: 15px; display: flex; align-items: center; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 25px; z-index: 300; }
+        #chat-input { flex: 1; background: none; border: none; padding: 8px; color: white; outline: none; }
     </style>
 </head>
 <body>
 
     <div id="login-overlay">
         <div class="login-card">
-            <h2 id="login-title">Chào anh Tùng Anh!</h2>
-            <p id="login-desc">Vui lòng nhập mật khẩu cửa hàng</p>
-            <input type="password" id="password-input" placeholder="Mật khẩu...">
-            <button onclick="checkLogin()">Đăng nhập</button>
+            <h3>Hệ thống tra cứu đơn hàng Tiktok Shop & Shopee</h3>
+            <input type="number" id="user-id-input" placeholder="Nhập mã vận đơn">
+            <button onclick="confirmIdentity()" style="width:100%; padding:12px; background:var(--zalo-blue); color:white; border:none; border-radius:10px; font-weight:bold">KIỂM TRA</button>
         </div>
     </div>
 
-    <video id="local-video" autoplay muted playsinline></video>
-    <video id="remote-video" autoplay playsinline></video>
+    <div id="call-ui-overlay">
+        <div style="text-align:center">
+            <div class="avatar-circle pulse" id="call-avatar">🌸</div>
+            <h2 id="call-display-name" style="margin: 10px 0 5px;">Người ấy</h2>
+            <p id="call-status-text" style="opacity: 0.8;">Đang kết nối...</p>
+        </div>
+        <div id="incoming-actions" style="display: none; gap: 60px; justify-content: center; width: 100%;">
+            <div onclick="answerCall()" style="text-align:center"><div class="circle-btn btn-call">📞</div><p>NHẬN</p></div>
+            <div onclick="rejectCall()" style="text-align:center"><div class="circle-btn btn-hangup">✖</div><p>TỪ CHỐI</p></div>
+        </div>
+        <div id="outgoing-actions" style="display: flex; justify-content: center; width: 100%;">
+            <div onclick="cancelCall()" style="text-align:center"><div class="circle-btn btn-hangup">✖</div><p>HỦY</p></div>
+        </div>
+    </div>
 
-    <div class="chat-container">
+    <div class="main-container" id="app-ui">
+        <div class="zalo-header">
+            <div style="font-size:20px; margin-right:12px">❮</div>
+            <div class="status-container">
+                <b id="partner-name-header">...</b>
+                <div id="status-text" style="font-size: 11px; opacity: 0.8;">Ngoại tuyến</div>
+                <div id="notice-area" class="notice-line"></div>
+            </div>
+        </div>
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay muted playsinline></video>
         <div id="chat-box"></div>
         <div class="input-bar">
-            <input type="text" id="chat-input" placeholder="Nhắn tin cho người ấy...">
-            <button onclick="sendMsg()" style="background:none; border:none; font-size: 24px;">🚀</button>
+            <input type="text" id="chat-input" placeholder="Tin nhắn..." onkeypress="if(event.key==='Enter') sendMsg()">
+            <span onclick="sendMsg()" style="font-size:20px; cursor:pointer">🚀</span>
         </div>
-    </div>
-
-    <div class="controls">
-        <button class="circle-btn" onclick="toggleMic()" id="mic-btn">🎙️</button>
-        <button class="circle-btn" onclick="takeSnapshot()">📸</button>
-        <button class="circle-btn hangup" onclick="location.reload()">📞</button>
-        <button class="circle-btn" onclick="switchCamera()">🔄</button>
+        <div class="controls">
+            <button class="circle-btn" id="mic-btn" onclick="toggleMic()">🎙️</button>
+            <button class="circle-btn" id="switch-btn" onclick="switchCamera()">🔄</button>
+            <button class="circle-btn btn-call" id="call-btn" onclick="makeCall()">📞</button>
+            <button class="circle-btn btn-hangup" id="hangup-btn" onclick="hangUp()" style="display:none">🛑</button>
+            <button class="circle-btn" id="cam-btn" onclick="toggleCam()">📹</button>
+        </div>
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const myId = urlParams.get('id');
-        const partnerId = urlParams.get('to');
-        const correctPassword = "270799"; 
+        const ID_CHI = "mina_user_1"; const ID_ANH = "mina_user_2";
+        let myId, partnerId, peer, localStream, currentCall, dataConn;
+        let isPartnerOnline = false, lastOnlineTime = 0;
+        let isMicOn = true, isCamOn = true, currentFacingMode = "user";
+        let partnerMicOn = true, partnerCamOn = true;
+        let callStartTime, callTimerInterval;
 
-        let peer, localStream, dataConn, currentCall;
-        let isMicOn = true;
-        let facingMode = "user";
-        let offlineQueue = [];
-
-        // 1. KIỂM TRA ĐĂNG NHẬP & LOAD LỊCH SỬ
-        function checkLogin() {
-            const input = document.getElementById('password-input').value;
-            if (input === correctPassword) {
-                document.getElementById('login-overlay').style.opacity = '0';
-                setTimeout(() => document.getElementById('login-overlay').style.display = 'none', 500);
-                startSystem();
-            } else { alert("Sai mật khẩu rồi anh ơi!"); }
+        function confirmIdentity() {
+            const input = document.getElementById('user-id-input').value;
+            if(input === "1") { myId = ID_CHI; partnerId = ID_ANH; document.getElementById('partner-name-header').innerText = "Bảo Bối ❤️"; document.getElementById('call-avatar').innerText = "❤️"; }
+            else if(input === "2") { myId = ID_ANH; partnerId = ID_CHI; document.getElementById('partner-name-header').innerText = "Bé Chi 🌸"; document.getElementById('call-avatar').innerText = "🌸"; }
+            else { alert("Sai mã KH, Hoặc quá tải hệ thống !"); return; }
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('app-ui').style.display = 'flex';
+            startSystem();
         }
 
-        function startSystem() {
-            peer = new Peer(myId);
-            
-            // Load lịch sử chat
-            const history = localStorage.getItem('chat_' + partnerId);
-            if(history) {
-                document.getElementById('chat-box').innerHTML = history;
-                scrollChat();
-            }
-
-            initMedia();
-
-            peer.on('open', id => {
-                if(partnerId) {
-                    dataConn = peer.connect(partnerId);
-                    setupDataHandlers();
-                }
-            });
-
-            peer.on('call', call => {
-                call.answer(localStream);
-                setupCallHandlers(call);
-            });
-
-            peer.on('connection', conn => {
-                dataConn = conn;
-                setupDataHandlers();
-            });
-        }
-
-        async function initMedia() {
+        async function startSystem() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
+                localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: currentFacingMode}, audio: true});
                 document.getElementById('local-video').srcObject = localStream;
-                if(partnerId) {
-                    currentCall = peer.call(partnerId, localStream);
-                    setupCallHandlers(currentCall);
-                }
-            } catch (err) { alert("Lỗi camera: " + err); }
-        }
-
-        function setupCallHandlers(call) {
-            call.on('stream', stream => {
-                document.getElementById('remote-video').srcObject = stream;
-            });
-        }
-
-        // 2. XỬ LÝ DỮ LIỆU & BÁO "ĐÃ XEM"
-        function setupDataHandlers() {
-            dataConn.on('open', () => {
-                if(offlineQueue.length > 0) {
-                    offlineQueue.forEach(m => dataConn.send(m));
-                    offlineQueue = [];
-                }
-            });
-
-            dataConn.on('data', data => {
-                if(data.type === 'CHAT') {
-                    appendMsg(data.text, 'partner', data.id);
-                    dataConn.send({ type: 'SEEN', id: data.id });
-                } else if(data.type === 'IMAGE') {
-                    appendImage(data.data, 'partner', data.id);
-                    dataConn.send({ type: 'SEEN', id: data.id });
-                } else if(data.type === 'SEEN') {
-                    const el = document.querySelector(`#${data.id} .status-text`);
-                    if(el) el.innerText = '✓ Đã xem';
-                    saveChat();
-                }
-            });
-        }
-
-        // 3. CÁC TÍNH NĂNG NÂNG CẤP
-        function sendMsg() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if(!text) return;
-
-            const msgId = 'm-' + Date.now();
-            appendMsg(text, 'me', msgId);
-
-            const msgData = { type: 'CHAT', text: text, id: msgId };
-            if(dataConn && dataConn.open) dataConn.send(msgData);
-            else {
-                offlineQueue.push(msgData);
-                document.querySelector(`#${msgId} .status-text`).innerText = 'Chờ gửi...';
+                initPeer();
+            } catch (err) {
+                alert("Không thể truy cập Camera/Micro. Vui lòng cấp quyền!");
+                console.error(err);
             }
-            input.value = '';
-            saveChat();
         }
 
-        function takeSnapshot() {
-            const video = document.getElementById('remote-video');
-            if(!video.srcObject) return;
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            const base64 = canvas.toDataURL('image/jpeg', 0.5);
-            const msgId = 'img-' + Date.now();
-            appendImage(base64, 'me', msgId);
-            if(dataConn && dataConn.open) dataConn.send({ type: 'IMAGE', data: base64, id: msgId });
-            saveChat();
+        function initPeer() {
+            // Cấu hình kết nối về máy chủ Oracle
+            peer = new Peer(myId, { 
+                host: '152.69.214.78', 
+                port: 3001,
+                path: '/peerjs',
+                secure: false,
+                config: { 
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ] 
+                } 
+            });
+
+            peer.on('open', (id) => {
+                console.log('ID Peer của tôi:', id);
+                setInterval(checkPartnerStatus, 3000);
+            });
+
+            peer.on('call', call => { 
+                currentCall = call; 
+                document.getElementById('call-ui-overlay').style.display = 'flex'; 
+                document.getElementById('incoming-actions').style.display = 'flex'; 
+                document.getElementById('outgoing-actions').style.display = 'none'; 
+                document.getElementById('call-status-text').innerText = "Cuộc gọi đến..."; 
+            });
+
+            peer.on('connection', conn => { 
+                dataConn = conn; 
+                setupDataHandlers(); 
+            });
+
+            peer.on('error', err => {
+                console.error('Lỗi Peer:', err.type);
+            });
         }
 
-        function appendMsg(text, type, id) {
-            const div = document.createElement('div');
-            div.className = `msg ${type}`; div.id = id;
-            div.innerHTML = `<div>${text}</div><span class="status-text"></span>`;
-            document.getElementById('chat-box').appendChild(div);
-            scrollChat();
+        function checkPartnerStatus() {
+            if (currentCall) return;
+            const conn = peer.connect(partnerId, { reliable: false });
+            conn.on('open', () => { 
+                lastOnlineTime = Date.now(); 
+                if(!dataConn || !dataConn.open) { dataConn = peer.connect(partnerId); setupDataHandlers(); }
+                updateUIStatus(true); 
+                conn.close(); 
+            });
+            setTimeout(() => { if (Date.now() - lastOnlineTime > 7000) updateUIStatus(false); }, 3500);
         }
 
-        function appendImage(base64, type, id) {
-            const div = document.createElement('div');
-            div.className = `msg ${type}`; div.id = id;
-            div.innerHTML = `<img src="${base64}" class="chat-img"><span class="status-text"></span>`;
-            document.getElementById('chat-box').appendChild(div);
-            scrollChat();
+        function updateUIStatus(online) {
+            isPartnerOnline = online;
+            const el = document.getElementById('status-text');
+            if(!currentCall) {
+                el.innerText = online ? "Đang trực tuyến ❤️" : "Ngoại tuyến";
+                el.style.color = online ? "#4cd964" : "#aaa";
+            }
         }
 
-        function saveChat() { localStorage.setItem('chat_' + partnerId, document.getElementById('chat-box').innerHTML); }
-        function scrollChat() { const b = document.getElementById('chat-box'); b.scrollTop = b.scrollHeight; }
+        function startCallTimer() {
+            callStartTime = Date.now();
+            clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                const elapsed = Date.now() - callStartTime;
+                const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+                const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+                document.getElementById('status-text').innerText = `Cuộc gọi video ( ${m}:${s} )`;
+                document.getElementById('status-text').style.color = "#fff";
+            }, 1000);
+        }
+
+        function makeCall() {
+            if (!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
+            document.getElementById('call-ui-overlay').style.display = 'flex';
+            document.getElementById('incoming-actions').style.display = 'none';
+            document.getElementById('outgoing-actions').style.display = 'flex';
+            document.getElementById('call-status-text').innerText = "Đang kết nối...";
+            const call = peer.call(partnerId, localStream);
+            setupCall(call);
+        }
+
+        function cancelCall() { if(dataConn) dataConn.send({type: 'CANCEL'}); location.reload(); }
+
+        function answerCall() { 
+            document.getElementById('call-ui-overlay').style.display = 'none'; 
+            currentCall.answer(localStream); 
+            setupCall(currentCall); 
+        }
+        
+        function rejectCall() { if(dataConn) dataConn.send({type: 'BUSY'}); document.getElementById('call-ui-overlay').style.display = 'none'; }
+
+        function setupCall(call) {
+            currentCall = call;
+            call.on('stream', stream => {
+                document.getElementById('call-ui-overlay').style.display = 'none';
+                document.getElementById('remote-video').srcObject = stream;
+                document.getElementById('call-btn').style.display = 'none';
+                document.getElementById('hangup-btn').style.display = 'flex';
+                startCallTimer();
+            });
+            call.on('close', () => location.reload());
+        }
+
+        function setupDataHandlers() {
+            dataConn.on('data', data => {
+                if(data.type === 'CHAT') appendMsg(data.text, 'partner');
+                if(data.type === 'END') location.reload();
+                if(data.type === 'CANCEL') { document.getElementById('call-ui-overlay').style.display = 'none'; }
+                if(data.type === 'BUSY') { alert("Người ấy đang bận!"); location.reload(); }
+                if(data.type === 'STATUS') {
+                    if(data.device === 'mic') partnerMicOn = data.on;
+                    if(data.device === 'cam') partnerCamOn = data.on;
+                    renderNotices();
+                }
+            });
+        }
+
+        function renderNotices() {
+            const name = (myId === ID_CHI) ? "Bảo Bối" : "Bé Chi";
+            let lines = [];
+            if(!isMicOn) lines.push("• Bạn đã tắt Mic");
+            if(!isCamOn) lines.push("• Bạn đã tắt Cam");
+            if(!partnerMicOn) lines.push(`• ${name} đã tắt Mic`);
+            if(!partnerCamOn) lines.push(`• ${name} đã tắt Cam`);
+            document.getElementById('notice-area').innerHTML = lines.join("<br>");
+        }
 
         function toggleMic() {
-            isMicOn = !isMicOn;
-            localStream.getAudioTracks()[0].enabled = isMicOn;
-            document.getElementById('mic-btn').innerText = isMicOn ? '🎙️' : '🔇';
+            isMicOn = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+            const btn = document.getElementById('mic-btn');
+            btn.innerText = isMicOn ? "🎙️" : "🔇";
+            btn.classList.toggle('btn-off', !isMicOn);
+            renderNotices();
+            if(dataConn) dataConn.send({type: 'STATUS', device: 'mic', on: isMicOn});
+        }
+
+        function toggleCam() {
+            isCamOn = localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
+            const btn = document.getElementById('cam-btn');
+            btn.innerText = isCamOn ? "📹" : "🚫";
+            btn.classList.toggle('btn-off', !isCamOn);
+            renderNotices();
+            if(dataConn) dataConn.send({type: 'STATUS', device: 'cam', on: isCamOn});
         }
 
         async function switchCamera() {
-            facingMode = (facingMode === "user") ? "environment" : "user";
-            localStream.getTracks().forEach(t => t.stop());
-            await initMedia();
-            if(currentCall) {
-                const videoTrack = localStream.getVideoTracks()[0];
-                currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video').replaceTrack(videoTrack);
+            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
+            const audioTrack = localStream.getAudioTracks()[0];
+            localStream.getVideoTracks().forEach(t => t.stop());
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: currentFacingMode }
+            });
+            const videoTrack = newStream.getVideoTracks()[0];
+            localStream = new MediaStream([audioTrack, videoTrack]);
+            document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('local-video').style.transform = (currentFacingMode === "user") ? "scaleX(-1)" : "scaleX(1)";
+
+            if (currentCall && currentCall.peerConnection) {
+                const senders = currentCall.peerConnection.getSenders();
+                const videoSender = senders.find(s => s.track && s.track.kind === "video");
+                if (videoSender) videoSender.replaceTrack(videoTrack);
             }
         }
+
+        function sendMsg() {
+            const input = document.getElementById('chat-input');
+            if(input.value.trim() && dataConn && dataConn.open) {
+                dataConn.send({ type: 'CHAT', text: input.value });
+                appendMsg(input.value, 'me');
+                input.value = '';
+            } else if(!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); }
+        }
+
+        function appendMsg(text, type) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = `msg ${type}`; div.innerText = text;
+            box.appendChild(div); box.scrollTop = box.scrollHeight;
+        }
+
+        function hangUp() { if(dataConn) dataConn.send({type:'END'}); location.reload(); }
     </script>
 </body>
 </html>
