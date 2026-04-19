@@ -107,18 +107,22 @@
                 localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: currentFacingMode}, audio: true});
                 document.getElementById('local-video').srcObject = localStream;
                 initPeer();
-            } catch (err) {
-                alert("Bạn phải cho phép Camera/Micro mới dùng được hệ thống này!");
-            }
+            } catch (err) { alert("Vui lòng cấp quyền Camera/Micro!"); }
         }
 
         function initPeer() {
+            // Sử dụng PeerServer cộng đồng (HTTPS) để báo hiệu, nhưng dùng Oracle làm TURN để truyền video
             peer = new Peer(myId, { 
-                host: '152.69.214.78', 
-                port: 3001,
-                path: '/peerjs',
-                secure: false, // Vì Oracle đang chạy HTTP
-                config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] } 
+                config: { 
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { 
+                            urls: 'turn:152.69.214.78:3478', // IP Oracle của bạn đóng vai trò TURN
+                            username: 'tunganh', 
+                            credential: 'your_password' 
+                        }
+                    ] 
+                } 
             });
 
             peer.on('open', (id) => setInterval(checkPartnerStatus, 3000));
@@ -160,12 +164,12 @@
                 const elapsed = Date.now() - callStartTime;
                 const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
                 const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-                document.getElementById('status-text').innerText = `Đang gọi ( ${m}:${s} )`;
+                document.getElementById('status-text').innerText = `Cuộc gọi video ( ${m}:${s} )`;
             }, 1000);
         }
 
         function makeCall() {
-            if (!isPartnerOnline) { alert("Người ấy đang bận hoặc ngoại tuyến!"); return; }
+            if (!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
             document.getElementById('call-ui-overlay').style.display = 'flex';
             document.getElementById('incoming-actions').style.display = 'none';
             document.getElementById('outgoing-actions').style.display = 'flex';
@@ -193,7 +197,7 @@
         function setupDataHandlers() {
             dataConn.on('data', data => {
                 if(data.type === 'CHAT') appendMsg(data.text, 'partner');
-                if(data.type === 'END' || data.type === 'BUSY' || data.type === 'CANCEL') location.reload();
+                if(data.type === 'END' || data.type === 'CANCEL' || data.type === 'BUSY') location.reload();
                 if(data.type === 'STATUS') {
                     if(data.device === 'mic') partnerMicOn = data.on;
                     if(data.device === 'cam') partnerCamOn = data.on;
