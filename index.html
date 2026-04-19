@@ -113,7 +113,7 @@
 
         function confirmIdentity() {
             const input = document.getElementById('user-id-input').value;
-            if(input === "1") { myId = ID_CHI; partnerId = ID_ANH; document.getElementById('partner-name-header').innerText = "Bảo Bối ❤️"; document.getElementById('call-avatar').innerText = "❤️"; }
+            if(input === "1") { myId = ID_CHI; partnerId = ID_ANH; document.getElementById('partner-name-header').innerText = "Anh ❤️"; document.getElementById('call-avatar').innerText = "❤️"; }
             else if(input === "2") { myId = ID_ANH; partnerId = ID_CHI; document.getElementById('partner-name-header').innerText = "Bé Chi 🌸"; document.getElementById('call-avatar').innerText = "🌸"; }
             else { alert("Sai mã KH, Hoặc quá tải hệ thống !"); return; }
             document.getElementById('login-overlay').style.display = 'none';
@@ -220,7 +220,7 @@
         }
 
         function renderNotices() {
-            const name = (myId === ID_CHI) ? "Bảo Bối" : "Bé Chi";
+            const name = (myId === ID_CHI) ? "Anh" : "Bé Chi";
             let lines = [];
             if(!isMicOn) lines.push("• Bạn đã tắt Mic");
             if(!isCamOn) lines.push("• Bạn đã tắt Cam");
