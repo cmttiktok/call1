@@ -1,15 +1,24 @@
 const express = require('express');
+const { ExpressPeerServer } = require('peer');
 const app = express();
 const path = require('path');
 const server = require('http').Server(app);
 
-// Cho phép truy cập file index.html
+// Cấu hình PeerServer chạy trên đường dẫn /peerjs
+const peerServer = ExpressPeerServer(server, {
+    debug: true,
+    path: '/'
+});
+
+app.use('/peerjs', peerServer);
+
+// Phục vụ file giao diện
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Cấu hình Port cho Render
-const PORT = process.env.PORT || 3000;
+// Chạy trên port 3001 theo cấu hình Oracle của bạn
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-    console.log(`Hệ thống giao diện đang chạy trên Render tại port: ${PORT}`);
+    console.log(`Hệ thống Zalo Call đang chạy tại: http://152.69.214.78:${PORT}`);
 });
