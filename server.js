@@ -9,7 +9,7 @@ app.get('/', (req, res) => {
 });
 
 // Cấu hình Port cho Render
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Hệ thống giao diện đang chạy trên Render tại port: ${PORT}`);
 });
