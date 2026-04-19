@@ -2,14 +2,25 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const server = require('http').Server(app);
+const { ExpressPeerServer } = require('peer');
 
-// Cho phép truy cập trực tiếp file index.html ở thư mục gốc
+// Cấu hình PeerServer chạy song song với ứng dụng web
+const peerServer = ExpressPeerServer(server, {
+    debug: true,
+    path: '/myapp',
+    proxied: true
+});
+
+// Đường dẫn kết nối PeerJS: http://152.69.214.78:3001/peerjs
+app.use('/peerjs', peerServer);
+
+// Hiển thị giao diện web từ file index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Cấu hình Port cho Render
-const PORT = process.env.PORT || 3000;
+// Cài đặt Port 3001 cho Oracle
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-    console.log(`Server đang chạy trên port: ${PORT}`);
+    console.log(`🚀 Hệ thống Zalo Call đang chạy tại: http://152.69.214.78:${PORT}`);
 });
