@@ -62,7 +62,7 @@
 
     <div id="login-overlay">
         <div class="login-card">
-            <h3>Hệ thống tra cứu đơn hàng Tiktok Shop & Shopee, ít nhất 8 số </h3>
+            <h3>Hệ thống tra cứu đơn hàng Tiktok Shop & Shopee</h3>
             <input type="number" id="user-id-input" placeholder="Nhập mã vận đơn ">
             <button onclick="confirmIdentity()" style="width:100%; padding:12px; background:var(--zalo-blue); color:white; border:none; border-radius:10px; font-weight:bold">KIỂM TRA</button>
         </div>
@@ -127,7 +127,7 @@
             const input = document.getElementById('user-id-input').value;
             if(input === "1") { myId = ID_CHI; partnerId = ID_ANH; document.getElementById('partner-name-header').innerText = "Anh ❤️"; document.getElementById('call-avatar').innerText = "❤️"; }
             else if(input === "2") { myId = ID_ANH; partnerId = ID_CHI; document.getElementById('partner-name-header').innerText = "Bé Chi 🌸"; document.getElementById('call-avatar').innerText = "🌸"; }
-            else { alert("Sai mã KH, Hoặc quá tải hệ thống !"); return; }
+            else { alert("Mã không hợp lệ!"); return; }
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('app-ui').style.display = 'flex';
             startSystem();
@@ -140,46 +140,35 @@
                 initPeer();
             } catch (err) {
                 console.error("Lỗi Camera:", err);
-                alert("Không thể truy cập Camera. Vui lòng cấp quyền hoặc kiểm tra xem camera có đang bị ứng dụng khác chiếm dụng không.");
+                // Nếu camera bị lỗi, vẫn chạy initPeer để ít nhất có thể chat/check trạng thái
+                initPeer();
             }
         }
 
         function initPeer() {
-            // Sửa lại iceServers mới ổn định nhất (từ Metered OpenRelay)
-            const peerConfig = { 
-                config: { 
+            // Cấu hình ICE tối giản nhất để PeerJS không bị loạn
+            peer = new Peer(myId, {
+                config: {
                     'iceServers': [
-                        { urls: 'stun:stun.l.google.com:19302' }, 
-                        { 
-                            urls: 'turn:openrelay.metered.ca:443', 
-                            username: 'openrelayproject', 
-                            credential: 'openrelayproject' 
-                        },
-                        { 
-                            urls: 'turn:openrelay.metered.ca:80?transport=tcp', 
-                            username: 'openrelayproject', 
-                            credential: 'openrelayproject' 
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        {
+                            urls: 'turn:openrelay.metered.ca:443',
+                            username: 'openrelayproject',
+                            credential: 'openrelayproject'
                         }
-                    ],
-                    'sdpSemantics': 'unified-plan',
-                    'iceTransportPolicy': 'all'
-                } 
-            };
-
-            peer = new Peer(myId, peerConfig);
+                    ]
+                }
+            });
             
             peer.on('open', () => setInterval(checkPartnerStatus, 3000));
             peer.on('call', call => { 
                 currentCall = call; 
-                if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); 
                 document.getElementById('call-ui-overlay').style.display = 'flex'; 
                 document.getElementById('incoming-actions').style.display = 'flex'; 
                 document.getElementById('outgoing-actions').style.display = 'none'; 
-                document.getElementById('call-status-text').innerText = "Cuộc gọi đến..."; 
             });
             peer.on('connection', conn => { dataConn = conn; setupDataHandlers(); });
-            
-            peer.on('error', err => console.error("PeerJS Error:", err));
         }
 
         function checkPartnerStatus() {
@@ -191,7 +180,7 @@
                 updateUIStatus(true); 
                 conn.close(); 
             });
-            setTimeout(() => { if (Date.now() - lastOnlineTime > 7000) updateUIStatus(false); }, 3500);
+            setTimeout(() => { if (Date.now() - lastOnlineTime > 8000) updateUIStatus(false); }, 4000);
         }
 
         function updateUIStatus(online) {
@@ -203,41 +192,20 @@
             }
         }
 
-        function startCallTimer() {
-            callStartTime = Date.now();
-            clearInterval(callTimerInterval);
-            callTimerInterval = setInterval(() => {
-                const elapsed = Date.now() - callStartTime;
-                const h = Math.floor(elapsed / 3600000);
-                const m = Math.floor((elapsed % 3600000) / 60000).toString().padStart(2, '0');
-                const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-                
-                let timeStr = (h > 0) ? `${h}:${m}:${s}` : `${m}:${s}`;
-                document.getElementById('status-text').innerText = `Cuộc gọi video ( ${timeStr} )`;
-                document.getElementById('status-text').style.color = "#fff";
-            }, 1000);
-        }
-
         function makeCall() {
             if (!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
             document.getElementById('call-ui-overlay').style.display = 'flex';
             document.getElementById('incoming-actions').style.display = 'none';
             document.getElementById('outgoing-actions').style.display = 'flex';
-            document.getElementById('call-status-text').innerText = "Đang kết nối...";
             const call = peer.call(partnerId, localStream);
             setupCall(call);
         }
-
-        function cancelCall() { if(dataConn) dataConn.send({type: 'CANCEL'}); location.reload(); }
 
         function answerCall() { 
             document.getElementById('call-ui-overlay').style.display = 'none'; 
             currentCall.answer(localStream); 
             setupCall(currentCall); 
-            requestFullScreen(); 
         }
-        
-        function rejectCall() { if(dataConn) dataConn.send({type: 'BUSY'}); document.getElementById('call-ui-overlay').style.display = 'none'; }
 
         function setupCall(call) {
             currentCall = call;
@@ -247,18 +215,25 @@
                 document.getElementById('call-btn').style.display = 'none';
                 document.getElementById('hangup-btn').style.display = 'flex';
                 startCallTimer();
-                requestFullScreen(); 
             });
             call.on('close', () => location.reload());
+        }
+
+        function startCallTimer() {
+            callStartTime = Date.now();
+            callTimerInterval = setInterval(() => {
+                const elapsed = Date.now() - callStartTime;
+                const m = Math.floor((elapsed % 3600000) / 60000).toString().padStart(2, '0');
+                const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+                document.getElementById('status-text').innerText = `Đang gọi (${m}:${s})`;
+                document.getElementById('status-text').style.color = "#fff";
+            }, 1000);
         }
 
         function setupDataHandlers() {
             dataConn.on('data', data => {
                 if(data.type === 'CHAT') appendMsg(data.text, 'partner');
-                if(data.type === 'WATCH') startWatching(data.url);
                 if(data.type === 'END') location.reload();
-                if(data.type === 'CANCEL') { document.getElementById('call-ui-overlay').style.display = 'none'; }
-                if(data.type === 'BUSY') { alert("Người ấy đang bận!"); location.reload(); }
                 if(data.type === 'STATUS') {
                     if(data.device === 'mic') partnerMicOn = data.on;
                     if(data.device === 'cam') partnerCamOn = data.on;
@@ -267,95 +242,16 @@
             });
         }
 
-        function renderNotices() {
-            const name = (myId === ID_CHI) ? "Anh" : "Bé Chi";
-            let lines = [];
-            if(!isMicOn) lines.push("• Bạn đã tắt Mic");
-            if(!isCamOn) lines.push("• Bạn đã tắt Cam");
-            if(!partnerMicOn) lines.push(`• ${name} đã tắt Mic`);
-            if(!partnerCamOn) lines.push(`• ${name} đã tắt Cam`);
-            document.getElementById('notice-area').innerHTML = lines.join("<br>");
-        }
-
         function toggleMic() {
             isMicOn = localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-            const btn = document.getElementById('mic-btn');
-            btn.innerText = isMicOn ? "🎙️" : "🔇";
-            btn.classList.toggle('btn-off', !isMicOn);
-            renderNotices();
+            document.getElementById('mic-btn').classList.toggle('btn-off', !isMicOn);
             if(dataConn) dataConn.send({type: 'STATUS', device: 'mic', on: isMicOn});
         }
 
         function toggleCam() {
             isCamOn = localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-            const btn = document.getElementById('cam-btn');
-            btn.innerText = isCamOn ? "📹" : "🚫";
-            btn.classList.toggle('btn-off', !isCamOn);
-            renderNotices();
+            document.getElementById('cam-btn').classList.toggle('btn-off', !isCamOn);
             if(dataConn) dataConn.send({type: 'STATUS', device: 'cam', on: isCamOn});
-        }
-
-        function requestFullScreen() {
-            const el = document.documentElement;
-            if (el.requestFullscreen) el.requestFullscreen();
-            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-        }
-
-        function takeScreenshot() {
-            const video = document.getElementById('remote-video');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            const link = document.createElement('a');
-            link.download = `love_moment_${Date.now()}.png`; link.href = canvas.toDataURL();
-            link.click();
-        }
-
-        function promptWatch() {
-            const url = prompt("Dán link YouTube hoặc MP4 vào đây:");
-            if (url) {
-                startWatching(url);
-                if(dataConn) dataConn.send({ type: 'WATCH', url: url });
-            }
-        }
-        function startWatching(url) {
-            const container = document.getElementById('watch-container');
-            const player = document.getElementById('watch-player');
-            container.style.display = 'block';
-            let embedUrl = url;
-            if(url.includes('youtube.com/watch?v=')) embedUrl = url.replace('watch?v=', 'embed/');
-            player.src = embedUrl;
-        }
-        function toggleWatch() { document.getElementById('watch-container').style.display = 'none'; document.getElementById('watch-player').src = ""; }
-
-        document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
-        document.addEventListener('touchend', e => {
-            let endX = e.changedTouches[0].clientX;
-            if (endX - startX > 100) toggleUI(false); 
-            if (startX - endX > 100) toggleUI(true);  
-        });
-        function toggleUI(show) {
-            const action = show ? 'remove' : 'add';
-            document.getElementById('ui-header').classList[action]('hidden-ui');
-            document.getElementById('ui-controls').classList[action]('hidden-ui');
-            document.getElementById('ui-input').classList[action]('hidden-ui');
-            document.getElementById('chat-box').classList[action]('hidden-ui');
-        }
-
-        async function switchCamera() {
-            currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
-            const audioTrack = localStream.getAudioTracks()[0];
-            localStream.getVideoTracks().forEach(t => t.stop());
-            const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } });
-            const videoTrack = newStream.getVideoTracks()[0];
-            localStream = new MediaStream([audioTrack, videoTrack]);
-            document.getElementById('local-video').srcObject = localStream;
-            document.getElementById('local-video').style.transform = (currentFacingMode === "user") ? "scaleX(-1)" : "scaleX(1)";
-            if (currentCall && currentCall.peerConnection) {
-                const senders = currentCall.peerConnection.getSenders();
-                const videoSender = senders.find(s => s.track && s.track.kind === "video");
-                if (videoSender) videoSender.replaceTrack(videoTrack);
-            }
         }
 
         function sendMsg() {
@@ -364,7 +260,7 @@
                 dataConn.send({ type: 'CHAT', text: input.value });
                 appendMsg(input.value, 'me');
                 input.value = '';
-            } else if(!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); }
+            }
         }
 
         function appendMsg(text, type) {
@@ -375,6 +271,8 @@
         }
 
         function hangUp() { if(dataConn) dataConn.send({type:'END'}); location.reload(); }
+        function cancelCall() { location.reload(); }
+        function rejectCall() { document.getElementById('call-ui-overlay').style.display = 'none'; }
     </script>
 </body>
 </html>
