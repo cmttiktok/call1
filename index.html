@@ -134,13 +134,40 @@
         }
 
         async function startSystem() {
-            localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: currentFacingMode}, audio: true});
-            document.getElementById('local-video').srcObject = localStream;
-            initPeer();
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: currentFacingMode}, audio: true});
+                document.getElementById('local-video').srcObject = localStream;
+                initPeer();
+            } catch (err) {
+                console.error("Lỗi Camera:", err);
+                alert("Không thể truy cập Camera. Vui lòng cấp quyền hoặc kiểm tra xem camera có đang bị ứng dụng khác chiếm dụng không.");
+            }
         }
 
         function initPeer() {
-            peer = new Peer(myId, { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }] } });
+            // Sửa lại iceServers mới ổn định nhất (từ Metered OpenRelay)
+            const peerConfig = { 
+                config: { 
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' }, 
+                        { 
+                            urls: 'turn:openrelay.metered.ca:443', 
+                            username: 'openrelayproject', 
+                            credential: 'openrelayproject' 
+                        },
+                        { 
+                            urls: 'turn:openrelay.metered.ca:80?transport=tcp', 
+                            username: 'openrelayproject', 
+                            credential: 'openrelayproject' 
+                        }
+                    ],
+                    'sdpSemantics': 'unified-plan',
+                    'iceTransportPolicy': 'all'
+                } 
+            };
+
+            peer = new Peer(myId, peerConfig);
+            
             peer.on('open', () => setInterval(checkPartnerStatus, 3000));
             peer.on('call', call => { 
                 currentCall = call; 
@@ -151,6 +178,8 @@
                 document.getElementById('call-status-text').innerText = "Cuộc gọi đến..."; 
             });
             peer.on('connection', conn => { dataConn = conn; setupDataHandlers(); });
+            
+            peer.on('error', err => console.error("PeerJS Error:", err));
         }
 
         function checkPartnerStatus() {
