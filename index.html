@@ -60,16 +60,14 @@
 </head>
 <body>
 
-    <!-- Giao diện tra cứu đơn hàng giả lập -->
     <div id="login-overlay">
         <div class="login-card">
-            <h3>Hệ thống tra cứu đơn hàng Tiktok Shop & Shopee</h3>
-            <input type="number" id="user-id-input" placeholder="Nhập mã vận đơn (Ít nhất 8 số)">
+            <h3>Hệ thống tra cứu đơn hàng Tiktok Shop & Shopee, ít nhất 8 số </h3>
+            <input type="number" id="user-id-input" placeholder="Nhập mã vận đơn ">
             <button onclick="confirmIdentity()" style="width:100%; padding:12px; background:var(--zalo-blue); color:white; border:none; border-radius:10px; font-weight:bold">KIỂM TRA</button>
         </div>
     </div>
 
-    <!-- Màn hình chờ cuộc gọi quay số/nhận cuộc gọi -->
     <div id="call-ui-overlay">
         <div style="text-align:center">
             <div class="avatar-circle pulse" id="call-avatar">🌸</div>
@@ -85,15 +83,12 @@
         </div>
     </div>
 
-    <!-- Khung giao diện gọi Video chính -->
     <div class="main-container" id="app-ui">
-        <!-- Khung xem chung phim/YouTube -->
         <div id="watch-container">
             <iframe id="watch-player" allow="autoplay"></iframe>
             <button onclick="toggleWatch()" style="position:absolute; top:5px; right:5px; background:red; color:white; border:none; border-radius:5px; z-index:700">X</button>
         </div>
 
-        <!-- Thanh thông tin Header kiểu Zalo -->
         <div class="zalo-header" id="ui-header">
             <div style="font-size:20px; margin-right:12px">❮</div>
             <div class="status-container">
@@ -102,22 +97,16 @@
                 <div id="notice-area" class="notice-line"></div>
             </div>
         </div>
-
-        <!-- Khung luồng Video -->
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay muted playsinline></video>
-        
-        <!-- Khung Chat chữ chồng lên video -->
         <div id="chat-box"></div>
         <div class="input-bar" id="ui-input">
             <input type="text" id="chat-input" placeholder="Tin nhắn..." onkeypress="if(event.key==='Enter') sendMsg()">
             <span onclick="sendMsg()" style="font-size:20px; cursor:pointer">🚀</span>
         </div>
-
-        <!-- Các phím chức năng điều khiển cuộc gọi -->
         <div class="controls" id="ui-controls">
-            <button class="circle-btn" onclick="takeScreenshot()" title="Chụp ảnh màn hình">📸</button>
-            <button class="circle-btn" onclick="promptWatch()" title="Xem chung phim/Youtube">📺</button>
+            <button class="circle-btn" onclick="takeScreenshot()">📸</button>
+            <button class="circle-btn" onclick="promptWatch()">📺</button>
             <button class="circle-btn" id="mic-btn" onclick="toggleMic()">🎙️</button>
             <button class="circle-btn" id="switch-btn" onclick="switchCamera()">🔄</button>
             <button class="circle-btn btn-call" id="call-btn" onclick="makeCall()">📞</button>
@@ -134,52 +123,38 @@
         let partnerMicOn = true, partnerCamOn = true;
         let callStartTime, callTimerInterval, startX = 0;
 
-        // Phân quyền đăng nhập ẩn bằng mã đơn hàng 1 hoặc 2
         function confirmIdentity() {
             const input = document.getElementById('user-id-input').value;
-            if(input === "1") { 
-                myId = ID_CHI; partnerId = ID_ANH; 
-                document.getElementById('partner-name-header').innerText = "Anh ❤️"; 
-                document.getElementById('call-avatar').innerText = "❤️"; 
-            }
-            else if(input === "2") { 
-                myId = ID_ANH; partnerId = ID_CHI; 
-                document.getElementById('partner-name-header').innerText = "Bé Chi 🌸"; 
-                document.getElementById('call-avatar').innerText = "🌸";
-            }
-            else { 
-                alert("Mã vận đơn không tồn tại hoặc lỗi kết nối máy chủ dữ liệu!"); 
-                return; 
-            }
+            if(input === "1") { myId = ID_CHI; partnerId = ID_ANH; document.getElementById('partner-name-header').innerText = "Anh ❤️"; document.getElementById('call-avatar').innerText = "❤️"; }
+            else if(input === "2") { myId = ID_ANH; partnerId = ID_CHI; document.getElementById('partner-name-header').innerText = "Bé Chi 🌸"; document.getElementById('call-avatar').innerText = "🌸"; }
+            else { alert("Sai mã KH, Hoặc quá tải hệ thống !"); return; }
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('app-ui').style.display = 'flex';
             startSystem();
         }
 
-        // Xin quyền thiết bị Camera/Microphone từ trình duyệt
         async function startSystem() {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: currentFacingMode}, audio: true});
-                document.getElementById('local-video').srcObject = localStream;
-                initPeer();
-            } catch (err) {
-                alert("Không thể truy cập Máy ảnh/Microphone. Vui lòng cấp quyền HTTPS!");
-                console.error(err);
-            }
+            localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: currentFacingMode}, audio: true});
+            document.getElementById('local-video').srcObject = localStream;
+            initPeer();
         }
 
-        // Khởi tạo thực thể Peer kết nối xuyên quốc gia về máy chủ Google Cloud của bạn
         function initPeer() {
-            peer = new Peer(myId, {
-                host: '35.240.167.217', // Địa chỉ IP Máy chủ Google Cloud mới của bạn
-                port: 3001,
-                path: '/peerjs/myapp',
-                secure: false, // Vì IP Google chạy trực tiếp không qua HTTPS proxy nên để false
-                config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] }
+            // Đã cập nhật trỏ về TURN Server Google Cloud mới lập để kết nối xuyên mạng Wifi/4G
+            peer = new Peer(myId, { 
+                config: { 
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' }, 
+                        { 
+                            urls: 'turn:35.240.167.217:3478', 
+                            username: 'tuanaturn', 
+                            credential: '270799' 
+                        }
+                    ] 
+                } 
             });
             
             peer.on('open', () => setInterval(checkPartnerStatus, 3000));
-            
             peer.on('call', call => { 
                 currentCall = call; 
                 if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); 
@@ -188,14 +163,9 @@
                 document.getElementById('outgoing-actions').style.display = 'none'; 
                 document.getElementById('call-status-text').innerText = "Cuộc gọi đến..."; 
             });
-            
-            peer.on('connection', conn => { 
-                dataConn = conn; 
-                setupDataHandlers(); 
-            });
+            peer.on('connection', conn => { dataConn = conn; setupDataHandlers(); });
         }
 
-        // Kiểm tra xem người kia có đang mở ứng dụng tra cứu này không
         function checkPartnerStatus() {
             if (currentCall) return;
             const conn = peer.connect(partnerId, { reliable: false });
@@ -217,7 +187,6 @@
             }
         }
 
-        // Đồng hồ bấm giờ thời gian cuộc gọi
         function startCallTimer() {
             callStartTime = Date.now();
             clearInterval(callTimerInterval);
@@ -233,7 +202,6 @@
             }, 1000);
         }
 
-        // Thực hiện cuộc gọi đi
         function makeCall() {
             if (!isPartnerOnline) { alert("Người ấy đang ngoại tuyến!"); return; }
             document.getElementById('call-ui-overlay').style.display = 'flex';
@@ -268,7 +236,6 @@
             call.on('close', () => location.reload());
         }
 
-        // Lắng nghe các lệnh điều khiển luồng dữ liệu thời gian thực giữa 2 máy
         function setupDataHandlers() {
             dataConn.on('data', data => {
                 if(data.type === 'CHAT') appendMsg(data.text, 'partner');
@@ -284,7 +251,6 @@
             });
         }
 
-        // Hiển thị dòng trạng thái thiết bị tắt/mở mic cam
         function renderNotices() {
             const name = (myId === ID_CHI) ? "Anh" : "Bé Chi";
             let lines = [];
@@ -319,7 +285,6 @@
             else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
         }
 
-        // Chụp màn hình khoảnh khắc cuộc gọi
         function takeScreenshot() {
             const video = document.getElementById('remote-video');
             const canvas = document.createElement('canvas');
@@ -330,9 +295,8 @@
             link.click();
         }
 
-        // Chức năng xem chung video giải trí
         function promptWatch() {
-            const url = prompt("Dán link YouTube hoặc mã nguồn video MP4 trực tiếp:");
+            const url = prompt("Dán link YouTube hoặc MP4 vào đây:");
             if (url) {
                 startWatching(url);
                 if(dataConn) dataConn.send({ type: 'WATCH', url: url });
@@ -348,7 +312,6 @@
         }
         function toggleWatch() { document.getElementById('watch-container').style.display = 'none'; document.getElementById('watch-player').src = ""; }
 
-        // Vuốt màn hình qua một bên để ẩn/hiện nhanh toàn bộ thanh giao diện (Khi muốn ngắm trọn vẹn màn hình)
         document.addEventListener('touchstart', e => startX = e.touches[0].clientX);
         document.addEventListener('touchend', e => {
             let endX = e.changedTouches[0].clientX;
@@ -363,7 +326,6 @@
             document.getElementById('chat-box').classList[action]('hidden-ui');
         }
 
-        // Đổi camera Trước/Sau mượt mà không mất kết nối
         async function switchCamera() {
             currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
             const audioTrack = localStream.getAudioTracks()[0];
@@ -380,7 +342,6 @@
             }
         }
 
-        // Nhắn tin văn bản trực tiếp trên màn hình cuộc gọi
         function sendMsg() {
             const input = document.getElementById('chat-input');
             if(input.value.trim() && dataConn && dataConn.open) {
