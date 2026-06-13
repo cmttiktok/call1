@@ -140,20 +140,24 @@
         }
 
         function initPeer() {
-            // Đã cập nhật trỏ về TURN Server Google Cloud mới lập để kết nối xuyên mạng Wifi/4G
+            // Đã thay đổi chính xác sang TURN Server của Google Cloud hoạt động tốt của bạn
             peer = new Peer(myId, { 
                 config: { 
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' }, 
                         { 
-                            urls: 'turn:35.240.167.217:3478', 
+                            urls: 'turn:35.240.167.217:3478?transport=udp', 
+                            username: 'tuanaturn', 
+                            credential: '270799' 
+                        },
+                        { 
+                            urls: 'turn:35.240.167.217:3478?transport=tcp', 
                             username: 'tuanaturn', 
                             credential: '270799' 
                         }
                     ] 
                 } 
             });
-            
             peer.on('open', () => setInterval(checkPartnerStatus, 3000));
             peer.on('call', call => { 
                 currentCall = call; 
