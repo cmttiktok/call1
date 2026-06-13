@@ -140,23 +140,20 @@
         }
 
         function initPeer() {
-            // Mảng cấu hình iceServers chuẩn định dạng WebRTC 
+            // Định tuyến trực tiếp về Máy chủ tín hiệu riêng và ép luồng dữ liệu chạy qua TURN Server Google Cloud
             peer = new Peer(myId, { 
+                host: window.location.hostname, // Tự động lấy domain/IP của Server Web chính
+                port: window.location.port || (window.location.protocol === 'https:' ? 443 : 80),
+                path: '/myapp', // Khớp chính xác với cấu hình endpoint trong server.js
                 config: { 
                     'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' }, 
+                        { urls: 'stun:stun1.l.google.com:19302' },
                         { 
-                            urls: 'stun:stun.l.google.com:19302' 
-                        }, 
-                        { 
-                            urls: 'stun:stun1.l.google.com:19302' 
-                        },
-                        { 
-                            urls: 'turn:35.240.167.217:3478?transport=udp', 
-                            username: 'tuanaturn', 
-                            credential: '270799' 
-                        },
-                        { 
-                            urls: 'turn:35.240.167.217:3478?transport=tcp', 
+                            urls: [
+                                'turn:35.240.167.217:3478?transport=udp',
+                                'turn:35.240.167.217:3478?transport=tcp'
+                            ], 
                             username: 'tuanaturn', 
                             credential: '270799' 
                         }
