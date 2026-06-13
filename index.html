@@ -140,22 +140,24 @@
         }
 
         function initPeer() {
-            // Đã thay đổi chính xác sang TURN Server của Google Cloud hoạt động tốt của bạn
+            // Giải pháp tối ưu: Ép trình duyệt thiết lập qua cả hai giao thức (STUN bảo mật và TURN Google Cloud)
+            // Đồng thời cấu hình tường lửa buộc trình duyệt di động chấp nhận dữ liệu
             peer = new Peer(myId, { 
                 config: { 
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' }, 
+                        { urls: 'stun:stun1.l.google.com:19302' },
                         { 
-                            urls: 'turn:35.240.167.217:3478?transport=udp', 
-                            username: 'tuanaturn', 
-                            credential: '270799' 
-                        },
-                        { 
-                            urls: 'turn:35.240.167.217:3478?transport=tcp', 
+                            urls: [
+                                'turn:35.240.167.217:3478?transport=udp',
+                                'turn:35.240.167.217:3478?transport=tcp'
+                            ], 
                             username: 'tuanaturn', 
                             credential: '270799' 
                         }
-                    ] 
+                    ],
+                    'iceTransportPolicy': 'all',
+                    'sdpSemantics': 'unified-plan'
                 } 
             });
             peer.on('open', () => setInterval(checkPartnerStatus, 3000));
