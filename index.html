@@ -140,12 +140,16 @@
         }
 
         function initPeer() {
-            // Trở lại máy chủ tín hiệu mặc định đám mây của PeerJS để sửa lỗi sập kết nối Wifi
+            // Mảng cấu hình iceServers chuẩn định dạng WebRTC 
             peer = new Peer(myId, { 
                 config: { 
                     'iceServers': [
-                        { urls: 'stun:stun.l.google.com:19302' }, 
-                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { 
+                            urls: 'stun:stun.l.google.com:19302' 
+                        }, 
+                        { 
+                            urls: 'stun:stun1.l.google.com:19302' 
+                        },
                         { 
                             urls: 'turn:35.240.167.217:3478?transport=udp', 
                             username: 'tuanaturn', 
@@ -157,6 +161,7 @@
                             credential: '270799' 
                         }
                     ],
+                    'iceTransportPolicy': 'all',
                     'sdpSemantics': 'unified-plan'
                 } 
             });
